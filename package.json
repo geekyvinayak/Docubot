@@ -1,7 +1,7 @@
 {
   "name": "docubot",
   "displayName": "Docubot",
-  "description": "it will document your projects",
+  "description": "It will document your projects",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.96.0"
@@ -21,18 +21,18 @@
       }
     ],
     "configuration": {
-        "title": "Doc Generator",
-        "properties": {
-            "docGenerator.geminiApiKey": {
-                "type": "string",
-                "description": "AIzaSyB-YfkbNRHzKSjnQkUAfL8uKPlkX3bRRR0"
-            },
-            "docGenerator.ignorePatterns": {
-                "type": "string",
-                "default": "**/{node_modules,.git,dist,bin}/**",
-                "description": "Custom ignore patterns (comma-separated)"
-            }
+      "title": "Doc Generator",
+      "properties": {
+        "docGenerator.geminiApiKey": {
+          "type": "string",
+          "description": "Enter your Gemini API Key from Google AI Studio"
+        },
+        "docGenerator.ignorePatterns": {
+          "type": "string",
+          "default": "**/{node_modules,.git,dist,bin}/**",
+          "description": "Custom ignore patterns (comma-separated)"
         }
+      }
     }
   },
   "scripts": {

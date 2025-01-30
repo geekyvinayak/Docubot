@@ -89,7 +89,7 @@ function truncate(text, length) {
 
 // Core Logic
 async function generateSummary(content) {
-    const apiKey = "AIzaSyB-YfkbNRHzKSjnQkUAfL8uKPlkX3bRRR0";
+    const apiKey = "AIzaSyC9znbVFm9UkoWLs0z0QRz25Y5Cr5gtCng";
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
@@ -135,7 +135,7 @@ async function processFile(filePath, rootPath) {
     }
 }
 
-async function createDocumentationStructure(files, rootPath) {
+async function createDocumentationStructure(files, rootPath, progressCallback) {
     const docRoot = path.join(rootPath, 'documentations');
     if (!fs.existsSync(docRoot)) fs.mkdirSync(docRoot, { recursive: true });
 
@@ -148,6 +148,7 @@ async function createDocumentationStructure(files, rootPath) {
         try {
             const content = await processFile(file.fsPath, rootPath);
             fs.writeFileSync(docPath, content);
+            progressCallback && progressCallback();
         } catch (error) {
             vscode.window.showErrorMessage(`Failed ${path.relative(rootPath, file.fsPath)}: ${error.message}`);
         }
@@ -162,46 +163,47 @@ function activate(context) {
             return;
         }
 
-        const rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-        
-        vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: "Generating Documentation...",
-                cancellable: false,
-            },
-            async (progress) => {
-                try {
-                    const ignorePatterns = getIgnorePatterns();
-                    const files = await vscode.workspace.findFiles(
-                        '**/*.*',
-                        `${ignorePatterns},**/*.{png,jpg,pdf,mp3,exe,dll}`
-                    );
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Generating Documentation",
+            cancellable: false
+        }, async (progress) => {
+            try {
+                progress.report({ message: "Initializing..." });
+                const rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+                
+                progress.report({ message: "Finding code files..." });
+                const ignorePatterns = getIgnorePatterns();
+                const files = await vscode.workspace.findFiles(
+                    '**/*.*',
+                    `${ignorePatterns},**/*.{png,jpg,pdf,mp3,exe,dll}`
+                );
 
-                    const codeFiles = files.filter(file => 
-                        CODE_FILE_EXTENSIONS.has(path.extname(file.fsPath).slice(1).toLowerCase())
-                    );
+                const codeFiles = files.filter(file => 
+                    CODE_FILE_EXTENSIONS.has(path.extname(file.fsPath).slice(1).toLowerCase())
+                );
 
-                    if (codeFiles.length === 0) {
-                        vscode.window.showInformationMessage('No code files found for documentation.');
-                        return;
-                    }
+                progress.report({ message: `Processing ${codeFiles.length} files...`, increment: 0 });
+                
+                let processed = 0;
+                const updateProgress = () => {
+                    processed++;
+                    progress.report({
+                        message: `Processing files (${processed}/${codeFiles.length})`,
+                        increment: (100 / codeFiles.length)
+                    });
+                };
 
-                    let processed = 0;
-                    for (const file of codeFiles) {
-                        await createDocumentationStructure([file], rootPath);
-                        processed++;
-                        progress.report({ message: `Processing ${processed}/${codeFiles.length} files...`, increment: (100 / codeFiles.length) });
-                    }
-
-                    vscode.window.showInformationMessage(`Generated docs for ${codeFiles.length} files`);
-                } catch (error) {
-                    vscode.window.showErrorMessage(`Documentation failed: ${error.message}`);
-                }
+                await createDocumentationStructure(codeFiles, rootPath, updateProgress);
+                
+                vscode.window.showInformationMessage(`Documentation generated for ${codeFiles.length} files!`);
+            } catch (error) {
+                vscode.window.showErrorMessage(`Documentation failed: ${error.message}`);
             }
-        );
+        });
     }));
 }
+
 
 function deactivate() {}
 
